@@ -200,6 +200,7 @@ with st.sidebar:
     threshold_mode = st.radio(
         'รูปแบบ Threshold',
         ['cost', '0.5'],
+        index=1,  # Default = Standard 50%
         format_func=lambda v: (
             'Cost-based: ปรับเกณฑ์แยกตามโมเดล' if v == 'cost'
             else 'Standard: ใช้ 50% เท่ากันทุกโมเดล'
