@@ -281,7 +281,7 @@ with screen_tab:
             st.warning(f'ผลจากโมเดลไม่ตรงกัน: {alerts} จาก 3 โมเดลแจ้งให้ตรวจสอบเพิ่มเติม')
         pcols = st.columns(3)
         for col, row in zip(pcols, result_rows):
-            col.metric(row['โมเดล'], f'{row["ความน่าจะเป็น Bad"]:.1%}')
+           col.metric(row['โมเดล'],f'{row["คะแนนความเสี่ยงด้านเครดิต"]:.1%}')
             col.caption(f'เกณฑ์ {row["Threshold"]:.0%} · {row["ผลคัดกรอง"]}')
         st.bar_chart(result.set_index('โมเดล')[['คะแนนความเสี่ยงด้านเครดิต']], y_label='คะแนนความเสี่ยงด้านเครดิต (0–1)')
         st.dataframe(
