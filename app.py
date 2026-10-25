@@ -245,13 +245,39 @@ if 'credit_prediction' not in st.session_state:
         st.stop()
 
 with screen_tab:
+    st.subheader('1. ใส่ข้อมูลตัวอย่างสินเชื่อ')
+    st.write('กรอกข้อมูลสำคัญด้านล่าง และเปิด **ข้อมูลเพิ่มเติม** หากต้องการปรับตัวแปรอื่น ๆ ให้ครบทั้ง 20 ตัว')
+    st.info('ระบบใส่ค่าเริ่มต้นเพื่อการทดลองเท่านั้น ควรตรวจสอบข้อมูลทุกช่องก่อนประเมิน')
+    # Every model's OneHotEncoder was fitted on the same training split.
+    categories = models['Random Forest']['categories']
+    values = {}
+    with st.form('credit_profile', clear_on_submit=False):
+        st.markdown('#### ข้อมูลสำคัญ')
+        lc, rc = st.columns(2, gap='large')
+        for idx, name in enumerate(QUICK_FIELDS):
+            with (lc if idx % 2 == 0 else rc):
+                values[name] = input_control(name, categories)
+        with st.expander('🧩 ข้อมูลเพิ่มเติม (อีก 13 ตัวแปร) — กดเพื่อแก้ไข'):
+            cc1, cc2 = st.columns(2, gap='large')
+            for idx, name in enumerate(ADVANCED_FIELDS):
+                with (cc1 if idx % 2 == 0 else cc2):
+                    values[name] = input_control(name, categories)
+        submitted = st.form_submit_button('🔍 ประเมินด้วยทั้ง 3 โมเดล', type='primary', use_container_width=True)
+    if submitted:
+        try:
+            frame = build_input_dataframe(values)
+            probas = {name: float(models[name]['model'].predict_proba(frame)[0, 1]) for name in MODEL_NAMES}
+            st.session_state['credit_prediction'] = {'values': values.copy(), 'probabilities': probas, 'is_demo': False}
+        except Exception as e:
+            st.error(f'ไม่สามารถประเมินได้: {e}')
+
+    st.divider()
+    st.subheader('2. ผลการประเมินจากทั้ง 3 โมเดล')
     if st.session_state['credit_prediction'].get('is_demo', False):
         st.info('🧪 **ผลประเมินจากข้อมูลสาธิตเริ่มต้น (Demo)** — แสดงอัตโนมัติเมื่อเปิดเว็บ ไม่ใช่ข้อมูลลูกค้าจริง กรุณาแก้ไขแบบฟอร์มแล้วกดประเมินใหม่')
     else:
         st.caption('แสดงผลประเมินล่าสุดจากข้อมูลที่ส่งผ่านแบบฟอร์มในเซสชันนี้')
     predictions = st.session_state['credit_prediction']['probabilities']
-    st.divider()
-    st.subheader('1. ผลการประเมินจากทั้ง 3 โมเดล')
     st.caption('คะแนนความเสี่ยงด้านเครดิต (%) คือค่าที่โมเดลประมาณโอกาสอยู่ในกลุ่ม Bad Credit ไม่ใช่ความน่าจะเป็นหนี้สูญ หรืออัตราผิดนัดจริงที่ผ่าน Calibration')
     result_rows = []
     alerts = 0
@@ -294,34 +320,6 @@ with screen_tab:
             use_container_width=True,
         )
     st.caption('ผลการคัดกรองไม่ใช่คำสั่งอนุมัติหรือปฏิเสธสินเชื่อ; แม้มีรายงาน Fairness เบื้องต้นแล้วก็ยังต้องตรวจสอบความเป็นธรรม การปรับเทียบความน่าจะเป็น และบริบทธุรกิจจริง')
-
-    st.divider()
-    st.subheader('2. ใส่หรือแก้ไขข้อมูลเพื่อประเมินใหม่')
-    st.write('กรอกข้อมูลสำคัญด้านล่าง และเปิด **ข้อมูลเพิ่มเติม** หากต้องการปรับตัวแปรอื่น ๆ ให้ครบทั้ง 20 ตัว')
-    st.info('ระบบใส่ค่าเริ่มต้นเพื่อการทดลองเท่านั้น ควรตรวจสอบข้อมูลทุกช่องก่อนประเมิน')
-    # Every model's OneHotEncoder was fitted on the same training split.
-    categories = models['Random Forest']['categories']
-    values = {}
-    with st.form('credit_profile', clear_on_submit=False):
-        st.markdown('#### ข้อมูลสำคัญ')
-        lc, rc = st.columns(2, gap='large')
-        for idx, name in enumerate(QUICK_FIELDS):
-            with (lc if idx % 2 == 0 else rc):
-                values[name] = input_control(name, categories)
-        with st.expander('🧩 ข้อมูลเพิ่มเติม (อีก 13 ตัวแปร) — กดเพื่อแก้ไข'):
-            cc1, cc2 = st.columns(2, gap='large')
-            for idx, name in enumerate(ADVANCED_FIELDS):
-                with (cc1 if idx % 2 == 0 else cc2):
-                    values[name] = input_control(name, categories)
-        submitted = st.form_submit_button('🔍 ประเมินด้วยทั้ง 3 โมเดล', type='primary', use_container_width=True)
-    if submitted:
-        try:
-            frame = build_input_dataframe(values)
-            probas = {name: float(models[name]['model'].predict_proba(frame)[0, 1]) for name in MODEL_NAMES}
-            st.session_state['credit_prediction'] = {'values': values.copy(), 'probabilities': probas, 'is_demo': False}
-            st.rerun()  # แสดงผลที่ส่วนบนหลังประเมินใหม่
-        except Exception as e:
-            st.error(f'ไม่สามารถประเมินได้: {e}')
 
 with compare_tab:
     st.subheader('เปรียบเทียบประสิทธิภาพโมเดลบนข้อมูลชุดเดียวกัน')
